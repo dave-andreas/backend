@@ -1,4 +1,4 @@
-// const crypto=require('../helper/encrypt')
+const crypto=require('../helper/crypto')
 const {mysqldb}=require('../connection')
 const fs=require('fs')
 const transporter=require('../helper/mailer')
@@ -6,14 +6,15 @@ const {createJWTToken,createJWTTokenemail}=require('../helper/jwt')
 
 module.exports={
     login:(req,res)=>{
-        const{username,password}=req.query
-        var sql=`select u.*, r.role from users u join role r on u.roleid=r.id where u.username='${username}' and password='${password}'`
+        const {username,password}=req.query
+        const encryptpass=crypto(password)
+        var sql=`select u.*, r.role from users u join role r on u.roleid=r.id where u.username='${username}' and password='${encryptpass}'`
         mysqldb.query(sql,(err,datauser)=>{
-            if (err) res.status(500).send(err)
+            if (err) return res.status(500).send(err)
             if (datauser.length===0){
                 return res.status(200).send({status:'error',error:'username or password incorect'})
             }
-            console.log(datauser[0].email)
+            // console.log(datauser[0].email)
             return res.send({datauser})
         })
     },
@@ -23,17 +24,18 @@ module.exports={
         })
     },
     getuser:(req,res)=>{
-        const{id}=req.params
+        const {id}=req.params
         var sql=`select u.*, r.role from users u join role r on u.roleid=r.id where u.id='${id}'`
         mysqldb.query(sql,(err,datauser)=>{
             if(err) res.status(500).send(err)
-            console.log('masok')
+            // console.log('masok')
             return res.send({datauser})
         })
     },
     register:(req,res)=>{
         var {username,password,email}=req.body
         // console.log(username)
+        password=crypto(password)
         var sql=`select * from users where username='${username}'`
         mysqldb.query(sql,(err,result)=>{
             if (err) return res.status(500).send(err)
@@ -49,12 +51,12 @@ module.exports={
                 }
                 sql='insert into users set ?'
                 mysqldb.query(sql,datauser,(err1,result1)=>{
-                    console.log(result1.insertId)
+                    // console.log(result1)
                     if(err1) return res.status(500).send({status:'error',err:err1})
                     sql=`select * from users where id='${result1.insertId}'`
                     mysqldb.query(sql,(err2,result2)=>{
                         if(err2) return res.status(500).send({status:'error',err:err2})
-                        console.log(result2[0].id,result2[0].username)
+                        // console.log(result2[0].id,result2[0].username)
                         // var tokenemail = createJWTTokenemail(result2[0].id,result2[0].username)
                         var linkverf = `localhost:3000/verified?username=${result2[0].username}&password=${result2[0].password}`
                         var mailoptions = {
@@ -77,16 +79,62 @@ module.exports={
     },
     verified:(req,res)=>{
         var {username,password} = req.body
+        // const encryptpass=crypto(password)
         // console.log(username,password)
         var sql = `update users set status='verified' where username='${username}' and password='${password}'`
         mysqldb.query(sql,(err,result)=>{
             if(err) return res.status(500).send({status:'error',err:err})
-            sql = `select * from users where username='${username}' and password='${password}'`
+            sql = `select u.*, r.role from users u join role r on u.roleid=r.id where u.username='${username}' and password='${password}'`
             mysqldb.query(sql,(err2,result2)=>{
                 if(err2) return res.status(500).send({status:'error',err:err2})
                 // console.log(result2[0])
                 return res.status(200).send(result2[0])
             })
+        })
+    },
+    encrypt:(req,res)=>{
+        var {pass}=req.params
+        var encryptpass=crypto(pass)
+        return res.send({encryptpass,pass})
+    },
+    editinfo:(req,res)=>{
+        var {userid,fullname,usia,gender,phone,address}=req.body
+        // console.log(userid,fullname,usia)
+        var sql = `select * from userinfo where userid=${userid}`
+        mysqldb.query(sql,(err,result)=>{
+            if(err) res.status(500).send({err})
+            console.log(result.length,'a')
+            if(result.length){
+                sql=`update userinfo set fullname='${fullname}', usia='${usia}', gender='${gender}', phone='${phone}', address='${address}' where userid=${userid}`
+                mysqldb.query(sql,(err1,result1)=>{
+                    if(err1) return res.status(500).send(err1)
+                    sql=`select * from userinfo where userid=${userid}`
+                    mysqldb.query(sql,(err2,result2)=>{
+                        if(err2) return res.status(500).send(err2)
+                        return res.status(200).send(result2[0])
+                    })
+                })
+            }else{
+                var userinfo={userid,fullname,usia,gender,phone,address}
+                sql='insert into userinfo set ?'
+                mysqldb.query(sql,userinfo,(err1,result1)=>{
+                    if(err1) return res.status(500).send(err1)
+                    sql=`select * from userinfo where id=${result1.insertId}`
+                    mysqldb.query(sql,(err2,result2)=>{
+                        if(err2) return res.status(500).send(err2)
+                        return res.status(200).send(result2[0])
+                    })
+                })
+            }
+        })
+    },
+    getinfo:(req,res)=>{
+        const {id}=req.params
+        var sql=`select * from userinfo where userid=${id}`
+        mysqldb.query(sql,(err,result)=>{
+            if(err) res.status(500).send(err)
+            console.log(result.length,'b')
+            return res.send(result[0])
         })
     }
     // register:(req,res)=>{
