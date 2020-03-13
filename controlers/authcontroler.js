@@ -1,6 +1,7 @@
 const crypto=require('../helper/crypto')
 const {mysqldb}=require('../connection')
 const fs=require('fs')
+const {uploader}=require('../helper/uploader')
 const transporter=require('../helper/mailer')
 const {createJWTToken,createJWTTokenemail}=require('../helper/jwt')
 
@@ -69,7 +70,6 @@ module.exports={
                         transporter.sendMail(mailoptions,(err3,result3)=>{
                             if(err3) return res.status(500).send({status:'error',err:err2})
                             // token = createJWTToken(result2[0].id,result2[0].username)
-                            console.log(result2[0])
                             return res.status(200).send(result2[0])
                         })
                     })
@@ -99,11 +99,9 @@ module.exports={
     },
     editinfo:(req,res)=>{
         var {userid,fullname,usia,gender,phone,address}=req.body
-        // console.log(userid,fullname,usia)
         var sql = `select * from userinfo where userid=${userid}`
         mysqldb.query(sql,(err,result)=>{
             if(err) res.status(500).send({err})
-            console.log(result.length,'a')
             if(result.length){
                 sql=`update userinfo set fullname='${fullname}', usia='${usia}', gender='${gender}', phone='${phone}', address='${address}' where userid=${userid}`
                 mysqldb.query(sql,(err1,result1)=>{
@@ -133,78 +131,58 @@ module.exports={
         var sql=`select * from userinfo where userid=${id}`
         mysqldb.query(sql,(err,result)=>{
             if(err) res.status(500).send(err)
-            console.log(result.length,'b')
             return res.send(result[0])
         })
+    },
+
+    // ======================= coba ===================================
+
+    postUsers:(req,res)=>{
+        try {
+            console.log(req.user)
+            const path = '/users/images'; //file save path
+            const upload = uploader(path, 'USERS').fields([{ name: 'image'}]); //uploader(path, 'default prefix')
+    
+            upload(req, res, (err) => {
+                if(err){
+                    return res.status(500).json({ message: 'Upload picture failed !', error: err.message });
+                }
+                //foto baru telah terupload
+                console.log('masuk')
+                const { image } = req.files;
+                console.log(image)
+                const imagePath = image ? path + '/' + image[0].filename : null;
+                console.log(imagePath)
+    
+                console.log(req.body.data)
+                const data = JSON.parse(req.body.data);
+                console.log(data)
+                data.image = imagePath;
+                data.password= cryptogenerate(data.password)
+
+                // data.userId=req.user.userid
+    
+                var sql = 'INSERT INTO users SET ?';
+                mysqldb.query(sql, data, (err, results) => {
+                    if(err) {
+                        console.log(err.message)
+                        fs.unlinkSync('./public' + imagePath);
+                        return res.status(500).json({ message: "There's an error on the server. Please contact the administrator.", error: err.message });
+                    }
+                   
+                    console.log(results);
+                    mysqldb.query(`select u.*,r.nama as rolename from users u left join roles r on u.roleid=r.id order by u.id`,(err,result4)=>{
+                        if (err) res.status(500).send(err)
+                        mysqldb.query('select * from roles',(err,result5)=>{
+                            if (err) res.status(500).send(err)
+                            res.status(200).send({datauser:result4,datarole:result5})
+                        })
+                    })   
+                })    
+            })
+        } catch(err) {
+            return res.status(500).json({ message: "There's an error on the server. Please contact the administrator.", error: err.message });
+        }
     }
-    // register:(req,res)=>{
-    //     const {username,password,email}=req.body
-    //     var encryptpass=hashpassword(password)
-    //     var sql=`select * from users where username='${username}' and password='${encryptpass}'`
-    //     db.query(sql,(err,results)=>{
-    //         if (err) res.status(500).send({status:'error',err})
-    //         if(results.length===0){
-    //             sql=`insert into users set ?`
-    //             var data={
-    //                 username,
-    //                 password:hashpassword(password),
-    //                 roleid:2,
-    //                 email,
-    //                 verified:0
-    //             }
-    //             db.query(sql,data,(err,results1)=>{
-    //                 if (err) res.status(500).send({status:'error insert',err})
-    //                 console.log(results1.insertId)
-    //                 sql=`select * from users where id=${results1.insertId}`
-    //                 db.query(sql,(err,results2)=>{
-    //                     if (err) res.status(500).send({status:'error select',err})
-    //                     // email disini
-    //                     const tokenemail=createJWTTokenemail({userid:results2[0].id,username:results2[0].username})
-    //                     console.log('das')
-    //                     var LinkVerifikasi=`http://localhost:3000/verified?token=${tokenemail}`
-    //                     var mailoptions={
-    //                         from:'hokage <aldinorahman36@gmail.com>',
-    //                         to:email,
-    //                         subject:`verifikasi Email app bioskop`,
-    //                         html:`tolong klik link ini untuk verifikasi :
-    //                         <a href=${LinkVerifikasi}>Join apps ini</a>`
-    //                     }
-    //                     transporter.sendMail(mailoptions,(err2,res2)=>{
-    //                         if(err2){
-    //                             console.log('das1')
-    //                             console.log(err2)
-    //                             return res.status(500).send({status:'error',err:err2})
-    //                         }
-    //                         console.log('das12')
-    //                         console.log('berhasil')
-    //                         const token=createJWTToken({userid:results2[0].id,username:results2[0].username})
-    //                         return res.status(200).send({result:results2[0],token})
-    //                     })
-    //                 })
-    //             })  
-    //         }else{
-    //             return res.status(500).send({message:'user sudah ada '})
-    //         }
-    //     })
-    // },
-    // verifiedemail:(req,res)=>{
-    //     const {
-    //         userid,
-    //         // username
-    //     }=req.user
-    //     console.log(req.query)
-    //     var sql=`select * from users where id=${userid}`
-    //     db.query(sql,(err,result)=>{
-    //         if (err) res.status(500).send({status:'error select user',err})
-    //         if(result.length===1){
-    //             sql=`update users set verified=1 where id=${userid}`
-    //             db.query(sql,(err,result1)=>{
-    //                 if (err) res.status(500).send({status:'error update user',err})
-    //                 return res.status(200).send({message:'berhasil update',result:result1})
-    //             })
-    //         }else{
-    //             return res.status(500).send({status:'error user lebih dari satu atau nol',err})
-    //         }
-    //     })
-    // }
 }
+

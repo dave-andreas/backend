@@ -12,7 +12,7 @@ app.use(cors())
 app.use(bearerToken())
 app.use(BodyParser.json())
 app.use(BodyParser.urlencoded({extended:false}))//buat upload gambar
-app.use(express.static('public'))//buat upload gambar nanti
+app.use('/public',express.static('./public'))//buat upload gambar nanti
 
 app.get('/',(req,res)=>{
     return res.status(200).send('welcome to jAHiTiN api')
