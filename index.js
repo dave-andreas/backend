@@ -3,7 +3,7 @@ const app=express()
 const BodyParser=require('body-parser')
 const cors=require('cors')
 const bearerToken=require('express-bearer-token')
-const {authrouter,adminrouter}=require('./routers')
+const {authrouter,adminrouter,userrouter}=require('./routers')
 const schedule=require('node-schedule')
 
 const port=2020
@@ -21,6 +21,7 @@ app.get('/',(req,res)=>{
 // app.use('/user',userRouters)
 app.use('/auth',authrouter)
 app.use('/admin',adminrouter)
+app.use('/user',userrouter)
 
 app.listen(port,()=>console.log('jAHiTiN aktif di '+port))
 

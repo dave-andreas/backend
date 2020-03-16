@@ -20,9 +20,10 @@ router.get('/getmodetil/:id',admincontroler.getmodetil)
 router.get('/selectfab/:id',admincontroler.getselectfab)
 router.get('/delmod2/:id',admincontroler.delmod2)
 router.put('/editmod',admincontroler.editmod)
-router.get('/dlt/:id',admincontroler.dlt)
+router.post('/editfabmod',admincontroler.editfabmod)
+router.post('/uplmod',admincontroler.uplmod)
+router.put('/delimgmod',admincontroler.delimgmod)
 
 router.post('/coba',admincontroler.coba)
-router.post('/upload',admincontroler.upl)
 
 module.exports = router

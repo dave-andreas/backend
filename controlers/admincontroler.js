@@ -1,14 +1,10 @@
-const crypto=require('../helper/crypto')
 const {mysqldb}=require('../connection')
-const transporter=require('../helper/mailer')
-const fs=require('fs')
 const multer=require('multer')
 const path=require('path')
-const {uploader}=require('../helper/uploader')
 
 const upload = multer ({
     storage: multer.diskStorage({
-        destination: './public/bahan',
+        destination: './public/models',
         filename: function(req,file,cb){
             cb(null,file.fieldname+Date.now()+path.extname(file.originalname))
         }
@@ -219,7 +215,15 @@ module.exports={
         var sql = `delete from models where id=${id}`
         mysqldb.query(sql,(err,result)=>{
             if(err) return res.status(500).send(err)
-            return res.status(200).send(result)
+            sql = `delete from bahan_model where idmodel=${id}`
+            mysqldb.query(sql,(err,result)=>{
+                if(err) return res.status(500).send(err)
+                sql = `delete from gmbmodel where modelid=${id}`
+                mysqldb.query(sql,(err,result)=>{
+                    if(err) return res.status(500).send(err)
+                    return res.status(200).send(result)
+                })
+            })
         })
     },
     editmod:(req,res)=>{
@@ -242,14 +246,61 @@ module.exports={
             })
         })
     },
-    dlt:(req,res)=>{
-        const {id} = req.params
+    editfabmod:(req,res)=>{
+        const {id,data} = req.body
         var sql = `delete from bahan_model where idmodel=${id}`
         mysqldb.query(sql,(err,result)=>{
-            if(err) return res.status(500).send(err)
-            sql = `select * from bahan_model where idmodel=${id}`
+            // if(err) return res.status(500).send(err)
+            // sql = `select * from bahan_model where idmodel=${id}`
+            // mysqldb.query(sql,(err,result)=>{
+            //     if(err) return res.status(500).send(err)
+            //     return res.status(200).send(result)
+            // })
+            data.forEach(data=>{
+                var fab = {idmodel:id,idbahan:data.idbahan}
+                var sql = 'insert into bahan_model set ?'
+                mysqldb.query(sql,fab,(err,result)=>{})
+            })
+            var sql = `select bm.idbahan, b.name from bahan_model bm join bahan b on bm.idbahan=b.id where idmodel=${id}`
             mysqldb.query(sql,(err,result)=>{
-                if(err) return res.status(500).send(err)
+                if (err) return res.status(500).send(err)
+                return res.status(200).send(result)
+            })
+        })
+    },
+    uplmod:(req,res)=>{
+        upload (req,res,(err) => {
+            if (err) {
+                console.log('ga')
+                return res.send(err)
+            } else {
+                console.log(req.file)
+                console.log(req.body.modelid)
+                // disini sudah ter-upload, bisa dilihat properti yg perlu digunakan
+                const path = ubah(req.file.path)
+                const {modelid} = req.body
+                const data = {modelid,path}
+                console.log(data)
+                var sql = 'insert into gmbmodel set ?'
+                mysqldb.query(sql,data,(err,result)=>{
+                    if(err) return res.status(500).send(err)
+                    sql = `select * from gmbmodel where modelid=${modelid}`
+                    mysqldb.query(sql,(err,image)=>{
+                        if (err) return res.status(500).send(err)
+                        return res.status(200).send(image)
+                    })
+                })
+            }
+        })
+    },
+    delimgmod:(req,res)=>{
+        const {id,modelid} = req.body
+        var sql = `delete from gmbmodel where id=${id}`
+        mysqldb.query(sql,(err,result)=>{
+            if (err) return res.status(500).send(err)
+            sql = `select * from gmbmodel where modelid=${modelid}`
+            mysqldb.query(sql,(err,result)=>{
+                if (err) return res.status(500).send(err)
                 return res.status(200).send(result)
             })
         })
@@ -267,34 +318,13 @@ module.exports={
             console.log(data)
             mysqldb.query(sql,data,(err,result)=>{
                 if(err) return res.status(500).send(err)
-                sql = 'select * from gmbbahan'
-                mysqldb.query(sql,(err,result)=>{
-                    if(err) return res.status(500).send(err)
-                    return res.status(200).send(result)
-                })
             })
         })
-    },
-    upl:(req,res)=>{
-        // console.log(req.file)
-        upload (req,res,(err) => {
-            if (err) {
-                console.log('ga')
-                return res.send(err)
-            } else {
-                console.log(req.file)
-                console.log(req.body.bahanid)
-                // disini sudah ter-upload, bisa dilihat properti yg perlu digunakan
-                const path = ubah(req.file.path)
-                const {bahanid} = req.body
-                const data = {bahanid,path}
-                console.log(data)
-                var sql = 'insert into gmbbahan set ?'
-                mysqldb.query(sql,data,(err,result)=>{
-                    if(err) return res.status(500).send(err)
-                    return res.status(200).send('ok')
-                })
-            }
+
+        sql = 'select * from gmbbahan'
+        mysqldb.query(sql,(err,result)=>{
+            if(err) return res.status(500).send(err)
+            return res.status(200).send(result)
         })
-    }
+    },
 }
