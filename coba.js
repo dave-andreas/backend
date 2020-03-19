@@ -109,34 +109,111 @@
 // // console.log(ubah(dest))
 // console.log(typeof(ubah(dest)))
 
-var newarr = [1,3,5,7]
-var oldarr = [1,2,3,4]
+// var newarr = [1,3,5,7]
+// var oldarr = [1,2,3,4]
 
-function check (narr,oarr) {
-    var add = []
-    var del = []
-    narr.forEach((valnew)=>{
-        var n = 0
-        oarr.forEach((valold)=>{
-            if(valnew===valold){
-                n+=1
-            }
-        })
-        if(n===0){
-            add.push(valnew)
-        }
-    })
-    oarr.forEach(valold=>{
-        var n = 0
-        narr.forEach(valnew=>{
-            if(valold===valnew){
-                n+=1
-            }
-        })
-        if(n===0){
-            del.push(valold)
-        }
-    })
-    return {add,del}
-}
-console.log(check(newarr,oldarr))
+// function check (narr,oarr) {
+//     var add = []
+//     var del = []
+//     narr.forEach((valnew)=>{
+//         var n = 0
+//         oarr.forEach((valold)=>{
+//             if(valnew===valold){
+//                 n+=1
+//             }
+//         })
+//         if(n===0){
+//             add.push(valnew)
+//         }
+//     })
+//     oarr.forEach(valold=>{
+//         var n = 0
+//         narr.forEach(valnew=>{
+//             if(valold===valnew){
+//                 n+=1
+//             }
+//         })
+//         if(n===0){
+//             del.push(valold)
+//         }
+//     })
+//     return {add,del}
+// }
+// console.log(check(newarr,oldarr))
+
+var order = [
+    {
+        "id": 1,
+        "userid": 2,
+        "statusorder": 0,
+        "buktibayar": "",
+        "tanggalorder": "2020-2-19 14:11:41",
+        "totharga": 82361
+    },
+    {
+        "id": 2,
+        "userid": 2,
+        "statusorder": 0,
+        "buktibayar": "",
+        "tanggalorder": "2020-2-19 14:14:16",
+        "totharga": 114600
+    },
+    {
+        "id": 5,
+        "userid": 2,
+        "statusorder": 0,
+        "buktibayar": "",
+        "tanggalorder": "2020-2-19 15:14:11",
+        "totharga": 440000
+    }
+]
+var ord2 = order.forEach(val=>{
+    // return val = {...val, buktibayar:'apalah'}
+    var detil = [
+        {
+            id: 20,
+            orderid: 5,
+            userid: 2,
+            model: 'Turtleneck Sweater',
+            bahan: 'Wool',
+            warna: 'Red',
+            size: 'tes',
+            jumlah: 2 },
+        {
+            id: 21,
+            orderid: 5,
+            userid: 2,
+            model: 'Kebaya Bali',
+            bahan: 'Tulle',
+            warna: 'Yellow',
+            size: 'testg',
+            jumlah: 1 }
+    ]
+    return {...val, od:detil}
+})
+
+var ord = order.map(val=>{
+    var detil = [
+        {
+            id: 20,
+            orderid: 5,
+            userid: 2,
+            model: 'Turtleneck Sweater',
+            bahan: 'Wool',
+            warna: 'Red',
+            size: 'tes',
+            jumlah: 2 },
+        {
+            id: 21,
+            orderid: 5,
+            userid: 2,
+            model: 'Kebaya Bali',
+            bahan: 'Tulle',
+            warna: 'Yellow',
+            size: 'testg',
+            jumlah: 1 }
+    ]
+    return {...val, buktibayar:'apalah', od:detil}
+})
+
+console.log(ord)

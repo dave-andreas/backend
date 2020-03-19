@@ -250,12 +250,6 @@ module.exports={
         const {id,data} = req.body
         var sql = `delete from bahan_model where idmodel=${id}`
         mysqldb.query(sql,(err,result)=>{
-            // if(err) return res.status(500).send(err)
-            // sql = `select * from bahan_model where idmodel=${id}`
-            // mysqldb.query(sql,(err,result)=>{
-            //     if(err) return res.status(500).send(err)
-            //     return res.status(200).send(result)
-            // })
             data.forEach(data=>{
                 var fab = {idmodel:id,idbahan:data.idbahan}
                 var sql = 'insert into bahan_model set ?'

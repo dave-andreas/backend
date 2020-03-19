@@ -1,7 +1,15 @@
 const {mysqldb} = require('../connection')
 const db = mysqldb
 
+const queryAsync = query => new Promise((resolve, reject) => {
+    db.query(query, (err, result) => {
+      if(err) return reject(err)
+      resolve(result)
+    })
+})
+
 module.exports = {
+    // ------------------------------------------------ \/\/\/ ordering \/\/\/ ------------------------------------------------
     ordering:(req,res)=>{
         const {userid,modelid} = req.query
         var sql = `select m.*, k.name as kategori from models m join kategori k on m.kategoriid=k.id where m.id=${modelid};`
@@ -52,11 +60,12 @@ module.exports = {
         }
         var sql = `insert into order_detil set ?`
         db.query(sql,data,(err,result)=>{
+            console.log(result)
             if (err) return res.status(500).send(err)
             return res.status(200).send('Successfully adding to cart')
         })
     },
-    // -----------------------------------------------------------
+    // ------------------------------------------------ \/\/\/ crud body size \/\/\/ ------------------------------------------------
     getboze:(req,res)=>{
         const {id} = req.params
         var sql = `select * from bodysize where userid=${id}`
@@ -67,10 +76,10 @@ module.exports = {
     },
     addboze:(req,res)=>{
         const data = req.body
-        var sql = `select into bodysize set ?`
-        db.query(sql,(err,result)=>{
+        var sql = `insert into bodysize set ?`
+        db.query(sql,data,(err,result)=>{
             if (err) return res.status(500).send(err)
-            sql =  `select * from bodysize where userid=${data.userid}`
+            sql = `select * from bodysize where userid=${data.userid}`
             db.query(sql,(err,result)=>{
                 if (err) return res.status(500).send(err)
                 return res.status(200).send(result)
@@ -90,7 +99,7 @@ module.exports = {
         })
     },
     editboze:(req,res)=>{
-        const {data} = req.body
+        const data = req.body
         var sql = `update bodysize set name='${data.name}', lingping=${data.lingping}, lingba=${data.lingba}, leda=${data.leda}, tule=${data.tule}, panmu=${data.panmu}, linggul=${data.linggul}, panpung=${data.panpung}, lepun=${data.lepun}, leba=${data.leba}, kele=${data.kele}, panle=${data.panle}, lule=${data.lule} where id=${data.id};`
         db.query(sql,(err,result)=>{
             if (err) return res.status(500).send(err)
@@ -101,9 +110,130 @@ module.exports = {
             })
         })
     },
+    // ------------------------------------------------ \/\/\/ cart \/\/\/ ------------------------------------------------
+    getcart:(req,res)=>{
+        const {id} = req.params
+        // var sql = `select * from order_detil where userid=${id}`
+        var sql = `select od.id, od.orderid, od.userid, m.name as model, m.harga as mharga, gm.path, b.name as bahan, b.harga as bharga, od.warna, bs.name as size, od.jumlah, od.harga 
+            from order_detil od 
+            join models m on od.modelid=m.id 
+            join gmbmodel gm on m.id=gm.modelid
+            join bahan b on od.bahanid=b.id
+            left join bodysize bs on od.bodysizeid=bs.id
+            where od.userid=${id} and od.orderid=0 group by od.id;`
+        db.query(sql,(err,result)=>{
+            if (err) return res.status(500).send(err)
+            return res.status(200).send(result)
+        })
+    },
+    delcart:(req,res)=>{
+        const {id,userid} = req.query
+        var sql = id == 0 ? `delete from order_detil where userid=${userid}` : `delete from order_detil where id=${id}`
+        db.query(sql,(err,result)=>{
+            if (err) return res.status(500).send(err)
+            sql = `select od.id, od.orderid, od.userid, m.name as model, m.harga as mharga, gm.path, b.name as bahan, b.harga as bharga, od.warna, bs.name as size, od.jumlah, od.harga 
+                from order_detil od 
+                join models m on od.modelid=m.id 
+                join gmbmodel gm on m.id=gm.modelid
+                join bahan b on od.bahanid=b.id
+                left join bodysize bs on od.bodysizeid=bs.id
+                where od.userid=${userid} and od.orderid=0 group by od.id;`
+            db.query(sql,(err,result)=>{
+                if (err) return res.status(500).send(err)
+                return res.status(200).send(result)
+            })
+        })
+    },
+    checkout:(req,res)=>{
+        // var od = req.body
+        var {id,userid,harga} = req.query
+        var d = new Date()
+        var data = {
+            userid: userid,
+            statusorder: 0,
+            buktibayar: '',
+            tanggalorder: `${d.getFullYear()}-${d.getMonth()}-${d.getDate()} ${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`,
+            totharga: harga
+        }
+        console.log(data)
+        var sql = 'insert into orders set ?'
+        db.query(sql,data,(err,result)=>{
+            if (err) return res.status(500).send(err)
+            sql = id == 0 ? `update order_detil set orderid=${result.insertId} where userid=${userid} and orderid=0` : `update order_detil set orderid=${result.insertId} where id=${id}`
+            db.query(sql,(err,result)=>{
+                if (err) return res.status(500).send(err)
+                sql = `select od.id, od.orderid, od.userid, m.name as model, m.harga as mharga, gm.path, b.name as bahan, b.harga as bharga, od.warna, bs.name as size, od.jumlah, od.harga 
+                    from order_detil od 
+                    join models m on od.modelid=m.id 
+                    join gmbmodel gm on m.id=gm.modelid
+                    join bahan b on od.bahanid=b.id
+                    left join bodysize bs on od.bodysizeid=bs.id
+                    where od.userid=${userid} and od.orderid=0 group by od.id;`
+                db.query(sql,(err,result)=>{
+                    if (err) return res.status(500).send(err)
+                    return res.status(200).send(result)
+                })
+            })
+        })
+    },
+    // ------------------------------------------------ \/\/\/ transaksi \/\/\/ ------------------------------------------------
+    getbill:(req,res)=>{
+        const {id} = req.params
+        var sql = `select * from orders where userid=${id}`
+        db.query(sql,(err,result)=>{
+            if (err) return res.status(500).send(err)
+            var arr = []
+            result.forEach(val =>{
+                arr.push(queryAsync(`select od.id, od.orderid, od.userid, m.name as model, b.name as bahan, od.warna, bs.name as size, od.jumlah
+                    from order_detil od
+                    join models m on od.modelid=m.id 
+                    join bahan b on od.bahanid=b.id 
+                    left join bodysize bs on od.bodysizeid=bs.id 
+                    where orderid=${val.id} ;`
+                ))
+            })
+            // console.log(arr)
+            Promise.all(arr)
+            .then(arr=>{
+                // console.log(arr[4])
+                arr.forEach((arr,index)=>{
+                    result[index].detil=arr
+                })
+                // console.log(result)
+                return res.status(200).send(result)
+            }).catch(err=>{
+                console.log(err)
+            })
+        })
+    },
+    getmovies:(req,res)=>{
+        var sql=`select * from movies`
+        db.query(sql,(err,result)=>{
+            if (err) res.status(500).send({status:'error',err})
+            var arr=[]
+            result.forEach(element => {
+                arr.push(queryAsync(`select md.id as idmoviesdetail,s.nama as studio,j.jadwal from moviesdetails md join studios s on md.studioid=s.idstudios join jadwal j on  md.jadwalid=j.idjadwal where md.movieid=${element.idmovies}`))
+            });
+            Promise.all(arr)
+            .then(result1=>{
+                result1.forEach((element,index)=>{
+                    result[index].studiojadwal=element
+                    result[index].genre=JSON.parse(result[index].genre)
+                })
+                sql=`select * from jadwal`
+                db.query(sql,(err,result2)=>{
+                    if (err) res.status(500).send({status:'error',err})
+                    sql=`select * from studios`
+                    db.query(sql,(err,studios)=>{
+                        if (err) res.status(500).send({status:'error',err})
+                        return res.status(200).send({movie:result,jadwal:result2,studios})
+                    })
+                })
+            })
+        })
+    },
     // ----------------------- coba ------------------------------
     coba:(req,res)=>{
-
         var sql = `update bahan_model set idbahan=6 where idmodel=1`
         db.query(sql,(err,result)=>{
             if (err) return res.status(500).send(err)

@@ -12,6 +12,12 @@ router.post('/addboze',usercontroler.addboze)
 router.put('/delboze',usercontroler.delboze)
 router.put('/editboze',usercontroler.editboze)
 
+router.get('/getcart/:id',usercontroler.getcart)
+router.post('/delcart',usercontroler.delcart)
+router.post('/checkout',usercontroler.checkout)
+
+router.get('/getbill/:id',usercontroler.getbill)
+
 router.put('/coba',usercontroler.coba)
 
 module.exports = router
