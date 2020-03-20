@@ -17,6 +17,7 @@ router.post('/delcart',usercontroler.delcart)
 router.post('/checkout',usercontroler.checkout)
 
 router.get('/getbill/:id',usercontroler.getbill)
+router.post('/uplbill',usercontroler.uplbill)
 
 router.put('/coba',usercontroler.coba)
 

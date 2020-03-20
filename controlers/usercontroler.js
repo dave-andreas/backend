@@ -1,5 +1,7 @@
 const {mysqldb} = require('../connection')
 const db = mysqldb
+const multer=require('multer')
+const path=require('path')
 
 const queryAsync = query => new Promise((resolve, reject) => {
     db.query(query, (err, result) => {
@@ -7,6 +9,41 @@ const queryAsync = query => new Promise((resolve, reject) => {
       resolve(result)
     })
 })
+
+const upload = multer ({
+    storage: multer.diskStorage({
+        destination: './public/buktibayar',
+        filename: function(req,file,cb){
+            cb(null,file.fieldname+Date.now()+path.extname(file.originalname))
+        }
+    }),
+    fileFilter: function (req,file,cb) {
+        const filetypes = /jpeg|jpg|png|gif/;
+        // Check ext
+        const extname = filetypes.test(path.extname(file.originalname).toLowerCase())
+        // Check mime
+        const mimetype = filetypes.test(file.mimetype)
+    
+        if(mimetype && extname){
+            return cb(null,true)
+        } else {
+            cb('Error: Images Only!') // bisa jadi caption error
+        }
+    }
+}).single('image')
+
+const ubah = (dest) => {
+    var arr = dest.split('\\')
+    var newdest = ''
+    for (let i = 0; i < arr.length; i++) {
+        if ( i === arr.length-1 ) {
+            newdest += ( arr[i] )
+        } else {
+            newdest += ( arr[i] + '/' )
+        }
+    }
+    return newdest
+}
 
 module.exports = {
     // ------------------------------------------------ \/\/\/ ordering \/\/\/ ------------------------------------------------
@@ -41,11 +78,7 @@ module.exports = {
                 sql = `select * from bodysize where id=${bodysizeid};`
                 db.query(sql,(err,bodysize)=>{
                     if (err) return res.status(500).send(err)
-                    sql = `select address from userinfo where userid=${userid};`
-                    db.query(sql,(err,address)=>{
-                        if (err) return res.status(500).send(err)
-                        return res.status(200).send({model,bahan,bodysize,address})
-                    })
+                    return res.status(200).send({model,bahan,bodysize})
                 })
             })
         })
@@ -121,9 +154,13 @@ module.exports = {
             join bahan b on od.bahanid=b.id
             left join bodysize bs on od.bodysizeid=bs.id
             where od.userid=${id} and od.orderid=0 group by od.id;`
-        db.query(sql,(err,result)=>{
+        db.query(sql,(err,cart)=>{
             if (err) return res.status(500).send(err)
-            return res.status(200).send(result)
+            sql = `select address from userinfo where userid=${id};`
+            db.query(sql,(err,address)=>{
+                if (err) return res.status(500).send(err)
+                return res.status(200).send({cart,address})
+            })
         })
     },
     delcart:(req,res)=>{
@@ -146,16 +183,16 @@ module.exports = {
     },
     checkout:(req,res)=>{
         // var od = req.body
-        var {id,userid,harga} = req.query
+        var {id,userid,harga,alamat} = req.query
         var d = new Date()
         var data = {
             userid: userid,
             statusorder: 0,
             buktibayar: '',
             tanggalorder: `${d.getFullYear()}-${d.getMonth()}-${d.getDate()} ${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`,
-            totharga: harga
+            totharga: harga,
+            alamat:alamat
         }
-        console.log(data)
         var sql = 'insert into orders set ?'
         db.query(sql,data,(err,result)=>{
             if (err) return res.status(500).send(err)
@@ -192,18 +229,58 @@ module.exports = {
                     where orderid=${val.id} ;`
                 ))
             })
-            // console.log(arr)
             Promise.all(arr)
             .then(arr=>{
-                // console.log(arr[4])
                 arr.forEach((arr,index)=>{
                     result[index].detil=arr
                 })
-                // console.log(result)
                 return res.status(200).send(result)
             }).catch(err=>{
                 console.log(err)
             })
+        })
+    },
+    uplbill:(req,res)=>{
+        upload (req,res,(err) => {
+            if (err) {
+                console.log('nga')
+                return res.status(500).send(err)
+            } else {
+                // console.log('file', req.file)
+                // console.log('body', req.body)
+                // disini sudah ke upload
+                const buktibayar = ubah(req.file.path)
+                const {userid,orderid} = req.body
+                var d = new Date()
+                var tanggalbayar = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()} ${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`
+                var sql = `update orders set statusorder=1, tanggalbayar='${tanggalbayar}', buktibayar='${buktibayar}' where id=${orderid}`
+                db.query(sql,(err,result)=>{
+                    if (err) return res.status(500).send(err)
+                    var sql = `select * from orders where userid=${userid}`
+                    db.query(sql,(err,result)=>{
+                        if (err) return res.status(500).send(err)
+                        var arr = []
+                        result.forEach(val =>{
+                            arr.push(queryAsync(`select od.id, od.orderid, od.userid, m.name as model, b.name as bahan, od.warna, bs.name as size, od.jumlah
+                                from order_detil od
+                                join models m on od.modelid=m.id 
+                                join bahan b on od.bahanid=b.id 
+                                left join bodysize bs on od.bodysizeid=bs.id 
+                                where orderid=${val.id} ;`
+                            ))
+                        })
+                        Promise.all(arr)
+                        .then(arr=>{
+                            arr.forEach((arr,index)=>{
+                                result[index].detil=arr
+                            })
+                            return res.status(200).send(result)
+                        }).catch(err=>{
+                            console.log(err)
+                        })
+                    })
+                })
+            }
         })
     },
     getmovies:(req,res)=>{
