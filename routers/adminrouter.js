@@ -24,6 +24,10 @@ router.post('/editfabmod',admincontroler.editfabmod)
 router.post('/uplmod',admincontroler.uplmod)
 router.put('/delimgmod',admincontroler.delimgmod)
 
+router.get('/getorder',admincontroler.getorder)
+router.get('/orderdetil/:id',admincontroler.orderdetil)
+router.post('/orderstat',admincontroler.orderstat)
+
 router.post('/coba',admincontroler.coba)
 
 module.exports = router

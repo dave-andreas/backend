@@ -299,6 +299,43 @@ module.exports={
             })
         })
     },
+    // ============================================================================================================================
+    getorder:(req,res)=>{
+        var sql = 'select o.id, o.userid, u.username, o.tanggalorder, o.tanggalbayar, o.totharga, o.statusorder from orders o join users u on o.userid=u.id ;'
+        mysqldb.query(sql,(err,result)=>{
+            if (err) return res.status(500).send(err)
+            return res.status(200).send(result)
+        })
+    },
+    orderdetil:(req,res)=>{
+        const {id} = req.params
+        var sql = `select u.username, o.buktibayar, o.tanggalorder, o.tanggalbayar, o.statusorder, o.alamat from orders o join users u on o.userid=u.id where o.id=${id};`
+        mysqldb.query(sql,(err,order)=>{
+            if (err) return res.status(500).send(err)
+            sql = `select od.id, m.name as model, b.name as bahan, od.warna, od.jumlah, od.jadi, bs.*
+                from order_detil od
+                join models m on od.modelid=m.id
+                join bahan b on od.bahanid=b.id
+                left join bodysize bs on od.bodysizeid=bs.id
+                where od.orderid=${id} group by od.id;`
+            mysqldb.query(sql,(err,detil)=>{
+                if (err) return res.status(500).send(err)
+                return res.status(200).send({order,detil})
+            })
+        })
+    },
+    orderstat:(req,res)=>{
+        const {orderid,statusorder} = req.body
+        var sql = `update orders set statusorder=${statusorder} where id=${orderid}`
+        mysqldb.query(sql,(err,result)=>{
+            if (err) return res.status(500).send(err)
+            sql = `select u.username, o.buktibayar, o.tanggalorder, o.tanggalbayar, o.statusorder, o.alamat from orders o join users u on o.userid=u.id where o.id=${orderid};`
+            mysqldb.query(sql,(err,order)=>{
+                if (err) return res.status(500).send(err)
+                return res.status(200).send(order)
+            })
+        })
+    },
     // ======================= coba ===================================
 
     coba:(req,res)=>{
