@@ -39,7 +39,16 @@ const ubah = (dest) => {
 
 module.exports={
     getmod:(req,res)=>{
-        var sql='select m.*, gm.path from models m left join gmbmodel gm on m.id=gm.modelid group by m.id;'
+        const {kat} = req.params
+        var sql = kat > 0 ? `select m.*, gm.path from models m left join gmbmodel gm on m.id=gm.modelid where kategoriid=${kat} group by m.id;` : 'select m.*, gm.path from models m left join gmbmodel gm on m.id=gm.modelid group by m.id;'
+        mysqldb.query(sql,(err,result)=>{
+            if(err) return res.status(500).send(err)
+            return res.status(200).send(result)
+        })
+    },
+    carimod:(req,res)=>{
+        const {cari} = req.query
+        var sql = `select m.*, gm.path from models m left join gmbmodel gm on m.id=gm.modelid where name like '%${cari}%' group by m.id;`
         mysqldb.query(sql,(err,result)=>{
             if(err) return res.status(500).send(err)
             return res.status(200).send(result)
@@ -130,6 +139,14 @@ module.exports={
     // ==============================================================================================================================
     getfab:(req,res)=>{
         var sql = 'select * from bahan'
+        mysqldb.query(sql,(err,result)=>{
+            if(err) return res.status(500).send(err)
+            return res.status(200).send(result)
+        })
+    },
+    carifab:(req,res)=>{
+        const {cari} = req.query
+        var sql = `select * from bahan where name like '%${cari}%'`
         mysqldb.query(sql,(err,result)=>{
             if(err) return res.status(500).send(err)
             return res.status(200).send(result)
@@ -268,13 +285,13 @@ module.exports={
                 console.log('ga')
                 return res.send(err)
             } else {
-                console.log(req.file)
-                console.log(req.body.modelid)
+                // console.log(req.file)
+                // console.log(req.body.modelid)
                 // disini sudah ter-upload, bisa dilihat properti yg perlu digunakan
                 const path = ubah(req.file.path)
                 const {modelid} = req.body
                 const data = {modelid,path}
-                console.log(data)
+                // console.log(data)
                 var sql = 'insert into gmbmodel set ?'
                 mysqldb.query(sql,data,(err,result)=>{
                     if(err) return res.status(500).send(err)
@@ -299,7 +316,7 @@ module.exports={
             })
         })
     },
-    // ============================================================================================================================
+    // ==============================================================================================================================
     getorder:(req,res)=>{
         var sql = 'select o.id, o.userid, u.username, o.tanggalorder, o.tanggalbayar, o.totharga, o.statusorder from orders o join users u on o.userid=u.id ;'
         mysqldb.query(sql,(err,result)=>{
@@ -334,6 +351,43 @@ module.exports={
                 if (err) return res.status(500).send(err)
                 return res.status(200).send(order)
             })
+        })
+    },
+    // ==============================================================================================================================
+    sellmod:(req,res)=>{
+        var sql = `select gm.path, m.name, m.harga, k.name as kategori, m.terjual
+            from models m 
+            left join gmbmodel gm on m.id=gm.modelid 
+            join kategori k on m.kategoriid=k.id
+            group by gm.modelid order by m.terjual desc limit 10;`
+        mysqldb.query(sql,(err,result)=>{
+            if (err) return res.status(500).send(err)
+            return res.status(200).send(result)
+        })
+    },
+    pickfab:(req,res)=>{
+        var sql = `select * from bahan order by terjual desc limit 10;`
+        mysqldb.query(sql,(err,result)=>{
+            if (err) return res.status(500).send(err)
+            return res.status(200).send(result)
+        })
+    },
+    total:(req,res)=>{
+        var sql = `select sum(totharga) as total from orders where statusorder>-1;`
+        mysqldb.query(sql,(err,total)=>{
+            if (err) return res.status(500).send(err)
+            sql = `select sum(jumlah) as dipesan from order_detil where orderid>0;`
+            mysqldb.query(sql,(err,dipesan)=>{
+                if (err) return res.status(500).send(err)
+                return res.status(200).send({total,dipesan})
+            })
+        })
+    },
+    statorder:(req,res)=>{
+        var sql = 'select statusorder, count(statusorder) as jumlah from orders group by statusorder order by statusorder ;'
+        mysqldb.query(sql,(err,result)=>{
+            if (err) return res.status(500).send(err)
+            return res.status(200).send(result)
         })
     },
     // ======================= coba ===================================

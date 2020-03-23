@@ -67,7 +67,7 @@ module.exports = {
             })
         })
     },
-    confirm:(req,res)=>{
+    orderingcheck:(req,res)=>{
         const {modelid,bahanid,bodysizeid,userid} = req.query
         var sql = `select m.name, m.harga, k.name as kategori, g.path from models m join kategori k on m.kategoriid=k.id join gmbmodel g on m.id=g.modelid where m.id=${modelid} group by m.id;`
         db.query(sql,(err,model)=>{
@@ -93,9 +93,9 @@ module.exports = {
         }
         var sql = `insert into order_detil set ?`
         db.query(sql,data,(err,result)=>{
-            console.log(result)
+            // console.log(result)
             if (err) return res.status(500).send(err)
-            return res.status(200).send('Successfully adding to cart')
+            return res.status(200).send(result)
         })
     },
     // ------------------------------------------------ \/\/\/ crud body size \/\/\/ ------------------------------------------------
@@ -147,7 +147,7 @@ module.exports = {
     getcart:(req,res)=>{
         const {id} = req.params
         // var sql = `select * from order_detil where userid=${id}`
-        var sql = `select od.id, od.orderid, od.userid, m.name as model, m.harga as mharga, gm.path, b.name as bahan, b.harga as bharga, od.warna, bs.name as size, od.jumlah, od.harga 
+        var sql = `select od.id, od.orderid, od.userid, m.name as model, m.harga as mharga, gm.path, b.name as bahan, b.harga as bharga, od.warna, bs.name as size, od.jumlah, od.harga, b.id as bahanid, m.id as modelid 
             from order_detil od 
             join models m on od.modelid=m.id 
             join gmbmodel gm on m.id=gm.modelid
@@ -183,7 +183,7 @@ module.exports = {
     },
     checkout:(req,res)=>{
         // var od = req.body
-        var {id,userid,harga,alamat} = req.query
+        var {id,userid,harga,alamat,jumlah,bahanid,modelid} = req.query
         var d = new Date()
         var data = {
             userid: userid,
@@ -199,16 +199,24 @@ module.exports = {
             sql = id == 0 ? `update order_detil set orderid=${result.insertId} where userid=${userid} and orderid=0` : `update order_detil set orderid=${result.insertId} where id=${id}`
             db.query(sql,(err,result)=>{
                 if (err) return res.status(500).send(err)
-                sql = `select od.id, od.orderid, od.userid, m.name as model, m.harga as mharga, gm.path, b.name as bahan, b.harga as bharga, od.warna, bs.name as size, od.jumlah, od.harga 
-                    from order_detil od 
-                    join models m on od.modelid=m.id 
-                    join gmbmodel gm on m.id=gm.modelid
-                    join bahan b on od.bahanid=b.id
-                    left join bodysize bs on od.bodysizeid=bs.id
-                    where od.userid=${userid} and od.orderid=0 group by od.id;`
+                sql = `update bahan set stok=stok-${jumlah}, terjual=terjual+${jumlah} where id=${bahanid}`
                 db.query(sql,(err,result)=>{
                     if (err) return res.status(500).send(err)
-                    return res.status(200).send(result)
+                    sql = `update models set terjual=terjual+${jumlah} where id=${modelid}`
+                    db.query(sql,(err,result)=>{
+                        if (err) return res.status(500).send(err)
+                        sql = `select od.id, od.orderid, od.userid, m.name as model, m.harga as mharga, gm.path, b.name as bahan, b.harga as bharga, od.warna, bs.name as size, od.jumlah, od.harga, b.id as bahanid, m.id as modelid
+                            from order_detil od 
+                            join models m on od.modelid=m.id 
+                            join gmbmodel gm on m.id=gm.modelid
+                            join bahan b on od.bahanid=b.id
+                            left join bodysize bs on od.bodysizeid=bs.id
+                            where od.userid=${userid} and od.orderid=0 group by od.id;`
+                        db.query(sql,(err,result)=>{
+                            if (err) return res.status(500).send(err)
+                            return res.status(200).send(result)
+                        })
+                    })
                 })
             })
         })
@@ -283,6 +291,46 @@ module.exports = {
             }
         })
     },
+    finishorder:(req,res)=>{
+        const {id} = req.params
+        var sql = `select u.username, o.buktibayar, o.tanggalorder, o.tanggalbayar, o.statusorder, o.alamat from orders o join users u on o.userid=u.id where o.id=${id};`
+        mysqldb.query(sql,(err,order)=>{
+            if (err) return res.status(500).send(err)
+            sql = `select od.id, m.name as model, b.name as bahan, od.warna, od.jumlah, bs.name as size, gm.path 
+                from order_detil od
+                join models m on od.modelid=m.id
+                join gmbmodel gm on gm.modelid=m.id
+                join bahan b on od.bahanid=b.id
+                left join bodysize bs on od.bodysizeid=bs.id
+                where od.orderid=${id} group by od.id;`
+            mysqldb.query(sql,(err,detil)=>{
+                if (err) return res.status(500).send(err)
+                return res.status(200).send({order,detil})
+            })
+        })
+    },
+    confirm:(req,res)=>{
+        const {orderid,statusorder} = req.query
+        var sql = `update orders set statusorder=${statusorder} where id=${orderid}`
+        mysqldb.query(sql,(err,result)=>{
+            if (err) return res.status(500).send(err)
+            sql = `select u.username, o.buktibayar, o.tanggalorder, o.tanggalbayar, o.statusorder, o.alamat from orders o join users u on o.userid=u.id where o.id=${orderid};`
+            mysqldb.query(sql,(err,order)=>{
+                if (err) return res.status(500).send(err)
+                sql = `select od.id, m.name as model, b.name as bahan, od.warna, od.jumlah, bs.name as size, gm.path 
+                    from order_detil od
+                    join models m on od.modelid=m.id
+                    join gmbmodel gm on gm.modelid=m.id
+                    join bahan b on od.bahanid=b.id
+                    left join bodysize bs on od.bodysizeid=bs.id
+                    where od.orderid=${orderid} group by od.id;`
+                mysqldb.query(sql,(err,detil)=>{
+                    if (err) return res.status(500).send(err)
+                    return res.status(200).send({order,detil})
+                })
+            })
+        })
+    },
     getmovies:(req,res)=>{
         var sql=`select * from movies`
         db.query(sql,(err,result)=>{
@@ -315,6 +363,18 @@ module.exports = {
         db.query(sql,(err,result)=>{
             if (err) return res.status(500).send(err)
             return res.status(200).send('Your order have been reported, please wait our admin for the confirmation. Thank you!')
+        })
+    },
+    kurang:(req,res)=>{
+        const {id,stok} = req.query
+        var sql = `update bahan set stok=stok-${stok} where id=${id}`
+        db.query(sql,(err,result)=>{
+            if (err) return res.status(500).send(err)
+            sql = `select * from bahan where id=${id}`
+            db.query(sql,(err,result)=>{
+                if (err) return res.status(500).send(err)
+                return res.status(200).send(result)
+            })
         })
     }
 }

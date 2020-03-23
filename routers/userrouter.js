@@ -4,7 +4,7 @@ const {usercontroler} = require('../controlers')
 const router = express.Router()
 
 router.get('/ordering',usercontroler.ordering)
-router.get('/confirm',usercontroler.confirm)
+router.get('/orderingcheck',usercontroler.orderingcheck)
 router.post('/savecart',usercontroler.savecart)
 
 router.get('/getboze/:id',usercontroler.getboze)
@@ -18,7 +18,10 @@ router.post('/checkout',usercontroler.checkout)
 
 router.get('/getbill/:id',usercontroler.getbill)
 router.post('/uplbill',usercontroler.uplbill)
+router.get('/finishorder/:id',usercontroler.finishorder)
+router.post('/confirm',usercontroler.confirm)
 
 router.put('/coba',usercontroler.coba)
+router.post('/kurang',usercontroler.kurang)
 
 module.exports = router
