@@ -189,7 +189,8 @@ module.exports = {
             userid: userid,
             statusorder: 0,
             buktibayar: '',
-            tanggalorder: `${d.getFullYear()}-${d.getMonth()}-${d.getDate()} ${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`,
+            tanggalorder: `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`,
+            jamorder:`${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`,
             totharga: harga,
             alamat:alamat
         }
@@ -260,8 +261,9 @@ module.exports = {
                 const buktibayar = ubah(req.file.path)
                 const {userid,orderid} = req.body
                 var d = new Date()
-                var tanggalbayar = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()} ${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`
-                var sql = `update orders set statusorder=1, tanggalbayar='${tanggalbayar}', buktibayar='${buktibayar}' where id=${orderid}`
+                var tanggalbayar = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+                var jambayar = `${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`
+                var sql = `update orders set statusorder=1, tanggalbayar='${tanggalbayar}', jambayar='${jambayar}', buktibayar='${buktibayar}' where id=${orderid}`
                 db.query(sql,(err,result)=>{
                     if (err) return res.status(500).send(err)
                     var sql = `select * from orders where userid=${userid}`
@@ -292,20 +294,24 @@ module.exports = {
         })
     },
     finishorder:(req,res)=>{
-        const {id} = req.params
+        const {id,userid} = req.query
         var sql = `select u.username, o.buktibayar, o.tanggalorder, o.tanggalbayar, o.statusorder, o.alamat from orders o join users u on o.userid=u.id where o.id=${id};`
-        mysqldb.query(sql,(err,order)=>{
+        db.query(sql,(err,order)=>{
             if (err) return res.status(500).send(err)
-            sql = `select od.id, m.name as model, b.name as bahan, od.warna, od.jumlah, bs.name as size, gm.path 
+            sql = `select od.id, m.name as model, m.id as modelid, b.name as bahan, od.warna, od.jumlah, bs.name as size, gm.path 
                 from order_detil od
                 join models m on od.modelid=m.id
                 join gmbmodel gm on gm.modelid=m.id
                 join bahan b on od.bahanid=b.id
                 left join bodysize bs on od.bodysizeid=bs.id
                 where od.orderid=${id} group by od.id;`
-            mysqldb.query(sql,(err,detil)=>{
+            db.query(sql,(err,detil)=>{
                 if (err) return res.status(500).send(err)
-                return res.status(200).send({order,detil})
+                sql = `select * from komentar where orderid=${id} and userid=${userid}`
+                db.query(sql,(err,komen)=>{
+                    if (err) return res.status(500).send(err)
+                    return res.status(200).send({order,detil,komen})
+                })
             })
         })
     },
@@ -317,7 +323,7 @@ module.exports = {
             sql = `select u.username, o.buktibayar, o.tanggalorder, o.tanggalbayar, o.statusorder, o.alamat from orders o join users u on o.userid=u.id where o.id=${orderid};`
             mysqldb.query(sql,(err,order)=>{
                 if (err) return res.status(500).send(err)
-                sql = `select od.id, m.name as model, b.name as bahan, od.warna, od.jumlah, bs.name as size, gm.path 
+                sql = `select od.id, m.name as model, m.id as modelid, b.name as bahan, od.warna, od.jumlah, bs.name as size, gm.path 
                     from order_detil od
                     join models m on od.modelid=m.id
                     join gmbmodel gm on gm.modelid=m.id
@@ -328,6 +334,19 @@ module.exports = {
                     if (err) return res.status(500).send(err)
                     return res.status(200).send({order,detil})
                 })
+            })
+        })
+    },
+    addkomen:(req,res)=>{
+        const {modelid,userid,orderid,komen} = req.body
+        const data = {modelid,userid,orderid,komen}
+        var sql = `insert into komentar set ?`
+        db.query(sql,data,(err,result)=>{
+            if (err) return res.status(500).send(err)
+            sql = `select * from komentar where modelid=${modelid} and userid=${userid}`
+            db.query(sql,(err,result)=>{
+                if (err) return res.status(500).send(err)
+                return res.status(200).send(result)
             })
         })
     },

@@ -3,7 +3,8 @@ const {admincontroler} = require('../controlers')
 
 const router = express.Router()
 
-router.get('/getmod/:kat',admincontroler.getmod)
+router.get('/getmodhom',admincontroler.getmodhom)
+router.get('/getmod/:cat',admincontroler.getmod)
 router.get('/carimod/',admincontroler.carimod)
 router.post('/addmod',admincontroler.addmod)
 router.get('/getgmb/:id',admincontroler.getgmb)
@@ -27,6 +28,7 @@ router.post('/uplmod',admincontroler.uplmod)
 router.put('/delimgmod',admincontroler.delimgmod)
 
 router.get('/getorder',admincontroler.getorder)
+router.get('/cariorder',admincontroler.cariorder)
 router.get('/orderdetil/:id',admincontroler.orderdetil)
 router.post('/orderstat',admincontroler.orderstat)
 
@@ -34,6 +36,8 @@ router.get('/sellmod',admincontroler.sellmod)
 router.get('/pickfab',admincontroler.pickfab)
 router.get('/total',admincontroler.total)
 router.get('/statorder',admincontroler.statorder)
+router.get('/trafic',admincontroler.trafic)
+router.get(`/userstat`,admincontroler.userstat)
 
 router.post('/coba',admincontroler.coba)
 

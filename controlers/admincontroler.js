@@ -38,9 +38,22 @@ const ubah = (dest) => {
 }
 
 module.exports={
+    getmodhom:(req,res)=>{
+        var sql = `select m.*, gm.path from models m left join gmbmodel gm on m.id=gm.modelid group by m.id order by m.terjual desc limit 7;`
+        mysqldb.query(sql,(err,result)=>{
+            if(err) return res.status(500).send(err)
+            sql = `select m.*, gm.path from models m left join gmbmodel gm on m.id=gm.modelid group by m.id order by m.id desc limit 4;`
+            mysqldb.query(sql,(err,result1)=>{
+                if(err) return res.status(500).send(err)
+                return res.status(200).send({result,result1})
+            })
+        })
+    },
     getmod:(req,res)=>{
-        const {kat} = req.params
-        var sql = kat > 0 ? `select m.*, gm.path from models m left join gmbmodel gm on m.id=gm.modelid where kategoriid=${kat} group by m.id;` : 'select m.*, gm.path from models m left join gmbmodel gm on m.id=gm.modelid group by m.id;'
+        const {cat} = req.params
+        var sql = cat == 0 ? 
+            'select m.*, gm.path from models m left join gmbmodel gm on m.id=gm.modelid group by m.id order by m.name;'
+            : `select m.*, gm.path from models m left join gmbmodel gm on m.id=gm.modelid where kategoriid=${cat} group by m.id order by m.name;` 
         mysqldb.query(sql,(err,result)=>{
             if(err) return res.status(500).send(err)
             return res.status(200).send(result)
@@ -56,24 +69,27 @@ module.exports={
     },
     getgmb:(req,res)=>{
         const {id} = req.params
-        var sql = `select * from gmbmodel where modelid=${id}`
+        var sql = `update models set dilihat=dilihat+1 where id=${id}`
         mysqldb.query(sql,(err,result)=>{
-            if(err) return res.status(500).send(err)
-            return res.status(200).send(result)
+            if (err) return res.status(500).send(err)
+            sql = `select * from gmbmodel where modelid=${id}`
+            mysqldb.query(sql,(err,gambar)=>{
+                if(err) return res.status(500).send(err)
+                sql = `select * from bahan_model bm join bahan b on bm.idbahan=b.id where idmodel=${id};`
+                mysqldb.query(sql,(err,bahan)=>{
+                    if(err) return res.status(500).send(err)
+                    sql = `select k.modelid, k.komen, u.username from komentar k join users u on k.userid=u.id where modelid=${id};`
+                    mysqldb.query(sql,(err,komen)=>{
+                        if(err) return res.status(500).send(err)
+                        return res.status(200).send({gambar,bahan,komen})
+                    })
+                })
+            })    
         })
     },
     addmod:(req,res)=>{
         var {name,desk,harga,kategoriid} = req.body
         var datamodel={name,desk,harga,kategoriid}
-        // var sql='insert into models set ?'
-        // mysqldb.query(sql,datamodel,(err1,result1)=>{
-        //     if(err1) return res.status(500).send(err1)
-        //     sql='select m.*, gm.path from models m left join gmbmodel gm on m.id=gm.modelid group by m.id'
-        //     mysqldb.query(sql,(err2,result2)=>{
-        //         if(err2) return res.status(500).send(err2)
-        //         return res.status(200).send(result2)
-        //     })
-        // })
         var sql=`select * from models where name='${name}' and kategoriid=${kategoriid}`
         mysqldb.query(sql,(err,result)=>{
             if(err) return res.status(500).send(err)
@@ -83,7 +99,7 @@ module.exports={
                 sql='insert into models set ?'
                 mysqldb.query(sql,datamodel,(err1,result1)=>{
                     if(err1) return res.status(500).send(err1)
-                    sql='select m.*, gm.path from models m left join gmbmodel gm on m.id=gm.modelid group by m.id;'
+                    sql='select m.*, gm.path from models m left join gmbmodel gm on m.id=gm.modelid group by m.id order by m.name;'
                     mysqldb.query(sql,(err2,result2)=>{
                         if(err2) return res.status(500).send(err2)
                         return res.status(200).send(result2)
@@ -104,7 +120,7 @@ module.exports={
         var sql = `delete from models where id=${id}`
         mysqldb.query(sql,(err,result)=>{
             if(err) return res.status(500).send(err)
-            sql = `select m.*, gm.path from models m left join gmbmodel gm on m.id=gm.modelid group by m.id;`
+            sql = `select m.*, gm.path from models m left join gmbmodel gm on m.id=gm.modelid group by m.id order by m.name;`
             mysqldb.query(sql,(err1,result1)=>{
                 if(err1) return res.status(500).send(err1)
                 return res.status(200).send(result1)
@@ -318,7 +334,22 @@ module.exports={
     },
     // ==============================================================================================================================
     getorder:(req,res)=>{
-        var sql = 'select o.id, o.userid, u.username, o.tanggalorder, o.tanggalbayar, o.totharga, o.statusorder from orders o join users u on o.userid=u.id ;'
+        var {status} = req.query
+        var sql = status == 100 ? 
+            `select o.id, o.userid, u.username, o.tanggalorder, o.tanggalbayar, o.totharga, o.statusorder from orders o join users u on o.userid=u.id;`
+            : `select o.id, o.userid, u.username, o.tanggalorder, o.tanggalbayar, o.totharga, o.statusorder from orders o join users u on o.userid=u.id where o.statusorder=${status};`
+        mysqldb.query(sql,(err,result)=>{
+            if (err) return res.status(500).send(err)
+            sql = `select tanggalorder from orders group by tanggalorder;`
+            mysqldb.query(sql,(err,result1)=>{
+                if (err) return res.status(500).send(err)
+                return res.status(200).send({result,result1})
+            })
+        })
+    },
+    cariorder:(req,res)=>{
+        var {tanggal} = req.query
+        var sql = `select o.id, o.userid, u.username, o.tanggalorder, o.tanggalbayar, o.totharga, o.statusorder from orders o join users u on o.userid=u.id where o.tanggalorder like '%${tanggal}%';`
         mysqldb.query(sql,(err,result)=>{
             if (err) return res.status(500).send(err)
             return res.status(200).send(result)
@@ -355,11 +386,12 @@ module.exports={
     },
     // ==============================================================================================================================
     sellmod:(req,res)=>{
-        var sql = `select gm.path, m.name, m.harga, k.name as kategori, m.terjual
+        const {sort} = req.query
+        var sql = `select gm.path, m.name, m.harga, k.name as kategori, m.terjual, m.dilihat
             from models m 
             left join gmbmodel gm on m.id=gm.modelid 
             join kategori k on m.kategoriid=k.id
-            group by gm.modelid order by m.terjual desc limit 10;`
+            group by gm.modelid order by m.${sort} desc limit 10;`
         mysqldb.query(sql,(err,result)=>{
             if (err) return res.status(500).send(err)
             return res.status(200).send(result)
@@ -373,7 +405,7 @@ module.exports={
         })
     },
     total:(req,res)=>{
-        var sql = `select sum(totharga) as total from orders where statusorder>-1;`
+        var sql = `select sum(totharga) as total from orders where statusorder>0;`
         mysqldb.query(sql,(err,total)=>{
             if (err) return res.status(500).send(err)
             sql = `select sum(jumlah) as dipesan from order_detil where orderid>0;`
@@ -390,17 +422,55 @@ module.exports={
             return res.status(200).send(result)
         })
     },
+    trafic:(req,res)=>{
+        var sql = `select * 
+            from (select tanggalorder, count(tanggalorder) as pesan from orders group by tanggalorder) a
+            left join (select tanggalbayar, count(tanggalbayar) as bayar, sum(totharga) as jumlah from orders where tanggalbayar is not null group by tanggalbayar) b
+            on a.tanggalorder=b.tanggalbayar
+            union
+            select * 
+            from (select tanggalorder, count(tanggalorder) as pesan from orders group by tanggalorder) a
+            right join (select tanggalbayar, count(tanggalbayar) as bayar, sum(totharga) as jumlah from orders where tanggalbayar is not null group by tanggalbayar) b
+            on a.tanggalorder=b.tanggalbayar
+            order by tanggalbayar;`
+        mysqldb.query(sql,(err,result)=>{
+            if (err) return res.status(500).send(err)
+            return res.status(200).send(result)
+        })
+    },
+    userstat:(req,res)=>{
+        const {sort} = req.query
+        var sql = `select a.pesan as pesan, b.username as username, b.bayar as bayar, b.bill as bill, b.potong as potong
+            from (select a.username, count(id) as pesan
+                from (select o.id, o.userid, u.username, o.statusorder, o.totharga, sum(od.jumlah) 
+                    from orders o 
+                    join order_detil od on o.id=od.orderid 
+                    join users u on u.id=o.userid
+                    group by o.id) a
+                group by a.userid) a 
+            join (select a.username, count(id) as bayar, sum(a.totharga) as bill, sum(a.jumlah) as potong
+                from (select o.id, o.userid, u.username, o.statusorder, o.totharga, sum(od.jumlah) as jumlah
+                    from orders o 
+                    join order_detil od on o.id=od.orderid 
+                    join users u on u.id=o.userid
+                    group by o.id) a
+                where a.statusorder>0
+                group by a.userid) b 
+            on a.username=b.username order by ${sort} desc;`
+        mysqldb.query(sql,(err,result)=>{
+            if (err) return res.status(500).send(err)
+            return res.status(200).send(result)
+        })
+    },
     // ======================= coba ===================================
 
     coba:(req,res)=>{
-        console.log(req.body)
         var data = req.body
         // var {bahanid,path} = req.body
         // var data = {bahanid,path}
         var sql = 'insert into gmbbahan set ?'
 
         data.forEach((data)=>{
-            console.log(data)
             mysqldb.query(sql,data,(err,result)=>{
                 if(err) return res.status(500).send(err)
             })

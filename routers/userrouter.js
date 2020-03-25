@@ -18,8 +18,9 @@ router.post('/checkout',usercontroler.checkout)
 
 router.get('/getbill/:id',usercontroler.getbill)
 router.post('/uplbill',usercontroler.uplbill)
-router.get('/finishorder/:id',usercontroler.finishorder)
+router.get('/finishorder',usercontroler.finishorder)
 router.post('/confirm',usercontroler.confirm)
+router.post('/addkomen',usercontroler.addkomen)
 
 router.put('/coba',usercontroler.coba)
 router.post('/kurang',usercontroler.kurang)
