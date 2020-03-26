@@ -37,6 +37,13 @@ const ubah = (dest) => {
     return newdest
 }
 
+var pres = `select o.id, o.userid, o.tanggalorder, u.username, od.modelid, m.name from orders o 
+    join users u on o.userid=u.id 
+    join order_detil od on o.id=od.orderid 
+    join models m on m.id=od.modelid
+    where o.tanggalorder in (select max(tanggalorder) from orders group by userid )
+    group by o.userid;`
+
 module.exports={
     getmodhom:(req,res)=>{
         var sql = `select m.*, gm.path from models m left join gmbmodel gm on m.id=gm.modelid group by m.id order by m.terjual desc limit 7;`
@@ -357,7 +364,7 @@ module.exports={
     },
     orderdetil:(req,res)=>{
         const {id} = req.params
-        var sql = `select u.username, o.buktibayar, o.tanggalorder, o.tanggalbayar, o.statusorder, o.alamat from orders o join users u on o.userid=u.id where o.id=${id};`
+        var sql = `select u.username, o.buktibayar, o.tanggalorder, o.tanggalbayar, o.statusorder, o.alamat, k.komen from orders o join users u on o.userid=u.id left join komentar k on o.id=k.orderid where o.id=${id};`
         mysqldb.query(sql,(err,order)=>{
             if (err) return res.status(500).send(err)
             sql = `select od.id, m.name as model, b.name as bahan, od.warna, od.jumlah, od.jadi, bs.*
@@ -386,12 +393,12 @@ module.exports={
     },
     // ==============================================================================================================================
     sellmod:(req,res)=>{
-        const {sort} = req.query
+        const {sort,limit} = req.query
         var sql = `select gm.path, m.name, m.harga, k.name as kategori, m.terjual, m.dilihat
             from models m 
             left join gmbmodel gm on m.id=gm.modelid 
             join kategori k on m.kategoriid=k.id
-            group by gm.modelid order by m.${sort} desc limit 10;`
+            group by gm.modelid order by m.${sort} desc limit ${limit};`
         mysqldb.query(sql,(err,result)=>{
             if (err) return res.status(500).send(err)
             return res.status(200).send(result)
@@ -459,6 +466,15 @@ module.exports={
             on a.username=b.username order by ${sort} desc;`
         mysqldb.query(sql,(err,result)=>{
             if (err) return res.status(500).send(err)
+            return res.status(200).send(result)
+        })
+    },
+    // ==============================================================================================================================
+    getusers:(req,res)=>{
+        var sql = `select u.id, u.username, u.email, r.role, u.status, i.fullname, i.usia, i.gender, i.phone, i.address 
+            from users u left join userinfo i on u.id=i.userid join role r on u.roleid=r.id;`
+        mysqldb.query(sql,(err,result)=>{
+            if(err) return res.status(500).send(err)
             return res.status(200).send(result)
         })
     },

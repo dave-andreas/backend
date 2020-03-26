@@ -39,6 +39,8 @@ router.get('/statorder',admincontroler.statorder)
 router.get('/trafic',admincontroler.trafic)
 router.get(`/userstat`,admincontroler.userstat)
 
+router.get('/getusers',admincontroler.getusers)
+
 router.post('/coba',admincontroler.coba)
 
 module.exports = router
