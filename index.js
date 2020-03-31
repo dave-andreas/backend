@@ -6,7 +6,7 @@ const bearerToken=require('express-bearer-token')
 const {authrouter,adminrouter,userrouter}=require('./routers')
 const schedule=require('node-schedule')
 
-const port=1234
+const PORT= process.env.PORT || 1234
 
 app.use(cors())
 app.use(bearerToken())
@@ -23,7 +23,7 @@ app.use('/auth',authrouter)
 app.use('/admin',adminrouter)
 app.use('/user',userrouter)
 
-app.listen(port,()=>console.log('jAHiTiN aktif di '+port))
+app.listen(PORT,()=>console.log('jAHiTiN aktif di '+PORT))
 
 // var a=0
 // schedule.scheduleJob('*/1 * * * * *', ()=>{
