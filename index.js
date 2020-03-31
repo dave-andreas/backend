@@ -24,9 +24,3 @@ app.use('/admin',adminrouter)
 app.use('/user',userrouter)
 
 app.listen(PORT,()=>console.log('jAHiTiN aktif di '+PORT))
-
-// var a=0
-// schedule.scheduleJob('*/1 * * * * *', ()=>{
-//     console.log(`tiap ${a+=1} detik`)
-// })
-//coba2 node-schedule
