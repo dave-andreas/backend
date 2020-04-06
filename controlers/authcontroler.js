@@ -59,7 +59,7 @@ module.exports={
                         if(err2) return res.status(500).send({status:'error',err:err2})
                         // console.log(result2[0].id,result2[0].username)
                         // var tokenemail = createJWTTokenemail(result2[0].id,result2[0].username)
-                        var linkverf = `localhost:3000/verified?username=${result2[0].username}&password=${result2[0].password}`
+                        var linkverf = `http://localhost:3000/verified?username=${result2[0].username}&password=${result2[0].password}`
                         var mailoptions = {
                             from : 'Manusia Paling Kece <daroytak@gmail.com>',
                             to : email,
