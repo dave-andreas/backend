@@ -6,7 +6,7 @@ const bearerToken=require('express-bearer-token')
 const {authrouter,adminrouter,userrouter}=require('./routers')
 const schedule=require('node-schedule')
 
-const PORT= process.env.PORT || 1234
+const PORT= process.env.PORT || 2020
 
 app.use(cors())
 app.use(bearerToken())
